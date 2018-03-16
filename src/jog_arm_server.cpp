@@ -403,6 +403,29 @@ void JogCalcs::updateJoints()
     return;
   }
 
+  bool change_goal = false;
+  // Go thru and see if the current jt_state_ is close to the incoming_jts_
+  for (int m=0; m<incoming_jts_.name.size(); m++)
+  {
+    for (int c=0; c<jt_state_.name.size(); c++)
+    {
+      if ( incoming_jts_.name[m] == jt_state_.name[c])
+      {
+        if(std::abs(jt_state_.position[c] - incoming_jts_.position[m]) > 0.25)
+        {
+          change_goal = true;
+          break;
+        }
+        goto NEXT_JOINT1;
+      }
+    }
+NEXT_JOINT1:
+    ;
+  }
+
+  // If the current position and current goal are close enough, do not update the current position. Get out
+  if(!change_goal) return;
+  
   // Store joints in a member variable
   for (int m=0; m<incoming_jts_.name.size(); m++)
   {
