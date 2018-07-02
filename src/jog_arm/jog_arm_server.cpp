@@ -322,7 +322,7 @@ JogCalcs::JogCalcs(const jog_arm_parameters &parameters,
           ros::Duration(parameters.incoming_command_timeout)) {
 
         // Skip the jogging publication if all inputs are 0.
-        if (!zero_traj_flag) {
+        if (!(zero_traj_flag && zero_joint_traj_flag)) {
           joint_trajectory_pub_.publish(shared_variables.new_traj);
         }
 
@@ -338,7 +338,7 @@ JogCalcs::JogCalcs(const jog_arm_parameters &parameters,
       }
 
       // Store last traj message flag to prevent superflous warnings
-      last_was_zero_traj = zero_traj_flag;
+      last_was_zero_traj = zero_traj_flag && zero_joint_traj_flag;
     }
     pthread_mutex_unlock(&shared_variables.new_traj_mutex);
 
@@ -506,6 +506,9 @@ void JogCalcs::jointJogCalcs(const jog_msgs::JogJoint &cmd,
 
   lowPassFilterVelocities(joint_vel);
   lowPassFilterPositions();
+
+  // update joint state with new values
+  kinematic_state_->setVariableValues(jt_state_);
 
   const ros::Time next_time = ros::Time::now() + ros::Duration(parameters_.publish_period);
   trajectory_msgs::JointTrajectory new_jt_traj =
@@ -703,6 +706,8 @@ JogCalcs::scaleJointCommand(const jog_msgs::JogJoint &command) const {
     }
   NEXT_JOINT:;
   }
+
+  return result;
 }
 
 // Calculate a pseudo-inverse.
