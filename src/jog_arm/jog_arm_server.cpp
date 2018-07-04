@@ -53,6 +53,7 @@ jog_arm::jog_arm_shared jog_arm::jogROSInterface::shared_variables_;
 /////////////////////////////////////////////////
 
 static const char *const NODE_NAME = "jog_arm_server";
+static const int GAZEBO_REDUNTANT_MESSAGE_COUNT = 30;
 
 // MAIN: create the worker threads and subscribe to jogging cmds and joint
 // angles
@@ -441,7 +442,7 @@ void JogCalcs::jogCalcs(const geometry_msgs::TwistStamped &cmd,
 
   // done with calculations
   if (parameters_.gazebo) {
-    insertRedundantPointsIntoTrajectory(new_jt_traj, 30);
+    insertRedundantPointsIntoTrajectory(new_jt_traj, GAZEBO_REDUNTANT_MESSAGE_COUNT);
   }
 
   // Share with main to be published
@@ -531,7 +532,7 @@ void JogCalcs::jointJogCalcs(const jog_msgs::JogJoint &cmd,
 
   // done with calculations
   if (parameters_.gazebo) {
-    insertRedundantPointsIntoTrajectory(new_jt_traj, 30);
+    insertRedundantPointsIntoTrajectory(new_jt_traj, GAZEBO_REDUNTANT_MESSAGE_COUNT);
   }
 
   // Share with main to be published
