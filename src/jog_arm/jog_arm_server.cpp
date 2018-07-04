@@ -511,7 +511,7 @@ void JogCalcs::jointJogCalcs(const jog_msgs::JogJoint &cmd,
   // update joint state with new values
   kinematic_state_->setVariableValues(jt_state_);
 
-  const ros::Time next_time = ros::Time::now() + ros::Duration(parameters_.publish_period);
+  const ros::Time next_time = ros::Time::now() + ros::Duration(parameters_.publish_delay);
   trajectory_msgs::JointTrajectory new_jt_traj =
     composeOutgoingMessage(jt_state_, next_time);
 
@@ -830,6 +830,9 @@ int jogROSInterface::readParameters(ros::NodeHandle &n) {
                                                "/jog_arm_server/publish_period",
                                     ros_parameters_.publish_period);
   error += !rosparam_shortcuts::get("", n, parameter_ns +
+                                               "/jog_arm_server/publish_delay",
+                                    ros_parameters_.publish_delay);
+  error += !rosparam_shortcuts::get("", n, parameter_ns +
                                                "/jog_arm_server/scale/linear",
                                     ros_parameters_.linear_scale);
   error += !rosparam_shortcuts::get(
@@ -881,6 +884,8 @@ int jogROSInterface::readParameters(ros::NodeHandle &n) {
                         "move_group_name: " << ros_parameters_.move_group_name);
   ROS_INFO_STREAM_NAMED(NODE_NAME,
                         "publish_period: " << ros_parameters_.publish_period);
+  ROS_INFO_STREAM_NAMED(NODE_NAME,
+                        "publish_delay: " << ros_parameters_.publish_delay);
   ROS_INFO_STREAM_NAMED(NODE_NAME,
                         "linear_scale: " << ros_parameters_.linear_scale);
   ROS_INFO_STREAM_NAMED(

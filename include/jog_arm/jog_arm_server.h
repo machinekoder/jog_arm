@@ -92,7 +92,7 @@ struct jog_arm_parameters {
       command_out_topic, planning_frame, warning_topic, joint_command_in_topic;
   double linear_scale, rotational_scale, joint_scale, singularity_threshold,
       hard_stop_singularity_threshold, low_pass_filter_coeff, publish_period,
-      incoming_command_timeout;
+      publish_delay, incoming_command_timeout;
   bool gazebo, collision_check;
 };
 
