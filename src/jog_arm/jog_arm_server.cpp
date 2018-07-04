@@ -316,15 +316,18 @@ JogCalcs::JogCalcs(const jog_arm_parameters &parameters,
     }
 
     // Send the newest target joints
-    pthread_mutex_lock(&shared_variables.new_traj_mutex);
-    if (!shared_variables.new_traj.joint_names.empty()) {
+    if (!new_traj_.joint_names.empty()) {
       // Check for stale cmds
-      if (ros::Time::now() - shared_variables.new_traj.header.stamp <
+      if (ros::Time::now() - new_traj_.header.stamp <
           ros::Duration(parameters.incoming_command_timeout)) {
 
         // Skip the jogging publication if all inputs are 0.
         if (!(zero_traj_flag && zero_joint_traj_flag)) {
-          joint_trajectory_pub_.publish(shared_variables.new_traj);
+          joint_trajectory_pub_.publish(new_traj_);
+        }
+        else if (!last_was_zero_traj) {
+          endOfJogCalcs();
+          joint_trajectory_pub_.publish(new_traj_);
         }
 
       } else if (!last_was_zero_traj) {
@@ -341,7 +344,6 @@ JogCalcs::JogCalcs(const jog_arm_parameters &parameters,
       // Store last traj message flag to prevent superflous warnings
       last_was_zero_traj = zero_traj_flag && zero_joint_traj_flag;
     }
-    pthread_mutex_unlock(&shared_variables.new_traj_mutex);
 
     main_rate.sleep();
   }
@@ -445,10 +447,7 @@ void JogCalcs::jogCalcs(const geometry_msgs::TwistStamped &cmd,
     insertRedundantPointsIntoTrajectory(new_jt_traj, GAZEBO_REDUNTANT_MESSAGE_COUNT);
   }
 
-  // Share with main to be published
-  pthread_mutex_lock(&shared_variables.new_traj_mutex);
-  shared_variables.new_traj = new_jt_traj;
-  pthread_mutex_unlock(&shared_variables.new_traj_mutex);
+  new_traj_ = new_jt_traj; // Share with main to be published
 }
 
 // Spam several redundant points into the trajectory. The first few may be
@@ -535,10 +534,7 @@ void JogCalcs::jointJogCalcs(const jog_msgs::JogJoint &cmd,
     insertRedundantPointsIntoTrajectory(new_jt_traj, GAZEBO_REDUNTANT_MESSAGE_COUNT);
   }
 
-  // Share with main to be published
-  pthread_mutex_lock(&shared_variables.new_traj_mutex);
-  shared_variables.new_traj = new_jt_traj;
-  pthread_mutex_unlock(&shared_variables.new_traj_mutex);
+  new_traj_ = new_jt_traj; // Share with main to be published
 }
 
 trajectory_msgs::JointTrajectory
