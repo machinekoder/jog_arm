@@ -451,45 +451,6 @@ void JogCalcs::jogCalcs(const geometry_msgs::TwistStamped &cmd,
   new_traj_ = new_jt_traj; // Share with main to be published
 }
 
-// Spam several redundant points into the trajectory. The first few may be
-// skipped if the
-// time stamp is in the past when it reaches the client. Needed for gazebo
-// simulation.
-// Start from 2 because the first point's timestamp is already
-// 1*parameters_.publish_period
-void JogCalcs::insertRedundantPointsIntoTrajectory(trajectory_msgs::JointTrajectory &trajectory, int count) const {
-  auto point = trajectory.points[0];
-  for (int i = 2; i < count; ++i) {
-      point.time_from_start = ros::Duration(i * parameters_.publish_period);
-      trajectory.points.push_back(point);
-    }
-}
-
-void JogCalcs::lowPassFilterPositions() {
-  for (size_t i = 0; i < jt_state_.name.size(); ++i) {
-    jt_state_.position[i] = position_filters_[i].filter(jt_state_.position[i]);
-
-    // Check for nan's
-    if (std::isnan(jt_state_.position[i])) {
-      jt_state_.position[i] = orig_jts_.position[i];
-      jt_state_.velocity[i] = 0.;
-    }
-  }
-}
-
-void JogCalcs::lowPassFilterVelocities(const Eigen::VectorXd &joint_vel) {
-  for (size_t i = 0; i < jt_state_.name.size(); ++i) {
-    jt_state_.velocity[i] =
-        velocity_filters_[i].filter(joint_vel[static_cast<long>(i)]);
-
-    // Check for nan's
-    if (std::isnan(joint_vel[static_cast<long>(i)])) {
-      jt_state_.position[i] = orig_jts_.position[i];
-      jt_state_.velocity[i] = 0.;
-    }
-  }
-}
-
 void JogCalcs::jointJogCalcs(const jog_msgs::JogJoint &cmd,
                              jog_arm_shared &shared_variables)
 {
@@ -557,6 +518,45 @@ void JogCalcs::endOfJogCalcs()
   }
 
   new_traj_ = new_jt_traj; // Share with main to be published
+}
+
+// Spam several redundant points into the trajectory. The first few may be
+// skipped if the
+// time stamp is in the past when it reaches the client. Needed for gazebo
+// simulation.
+// Start from 2 because the first point's timestamp is already
+// 1*parameters_.publish_period
+void JogCalcs::insertRedundantPointsIntoTrajectory(trajectory_msgs::JointTrajectory &trajectory, int count) const {
+  auto point = trajectory.points[0];
+  for (int i = 2; i < count; ++i) {
+      point.time_from_start = ros::Duration(i * parameters_.publish_period);
+      trajectory.points.push_back(point);
+    }
+}
+
+void JogCalcs::lowPassFilterPositions() {
+  for (size_t i = 0; i < jt_state_.name.size(); ++i) {
+    jt_state_.position[i] = position_filters_[i].filter(jt_state_.position[i]);
+
+    // Check for nan's
+    if (std::isnan(jt_state_.position[i])) {
+      jt_state_.position[i] = orig_jts_.position[i];
+      jt_state_.velocity[i] = 0.;
+    }
+  }
+}
+
+void JogCalcs::lowPassFilterVelocities(const Eigen::VectorXd &joint_vel) {
+  for (size_t i = 0; i < jt_state_.name.size(); ++i) {
+    jt_state_.velocity[i] =
+        velocity_filters_[i].filter(joint_vel[static_cast<long>(i)]);
+
+    // Check for nan's
+    if (std::isnan(joint_vel[static_cast<long>(i)])) {
+      jt_state_.position[i] = orig_jts_.position[i];
+      jt_state_.velocity[i] = 0.;
+    }
+  }
 }
 
 trajectory_msgs::JointTrajectory
@@ -630,18 +630,15 @@ bool JogCalcs::checkIfJointsWithinBounds(trajectory_msgs::JointTrajectory &new_j
   for (auto joint: joint_model_group_->getJointModels()) {
     if (!kinematic_state_->satisfiesVelocityBounds(joint)) {
       ROS_WARN_STREAM_THROTTLE_NAMED(
-        2, NODE_NAME, ros::this_node::getName()
-        << " " << joint->getName() << " " << joint->getFirstVariableIndex()
-        << " close to a "
-           " velocity limit. Enforcing limit.");
+        2, NODE_NAME, ros::this_node::getName() << " " << joint->getName()
+                                                << " close to a  velocity limit. Enforcing limit.");
       kinematic_state_->enforceVelocityBounds(joint);
       new_jt_traj.points[0].velocities[joint->getFirstVariableIndex()] = kinematic_state_->getJointVelocities(joint)[0];
     }
     if (!kinematic_state_->satisfiesPositionBounds(joint)) {
       ROS_WARN_STREAM_THROTTLE_NAMED(
         2, NODE_NAME, ros::this_node::getName() << " " << joint->getName()
-                                                << " close to a "
-                                    " position limit. Halting.");
+                                                << " close to a  position limit. Halting.");
       halting = true;
     }
   }
