@@ -4,13 +4,16 @@
 
 namespace to_twist
 {
-class xboxToTwist
+class SpaceMouseToTwist
 {
 public:
-  xboxToTwist() : spinner_(2)
+  SpaceMouseToTwist() : spinner_(2)
   {
-    joy_sub_ = n_.subscribe("joy", 1, &xboxToTwist::joyCallback, this);
-    twist_pub_ = n_.advertise<geometry_msgs::TwistStamped>("jog_arm_server/delta_jog_cmds", 1);
+    std::string output_topic;
+    ros::param::param("~output_topic", output_topic, std::string("jog_arm_server/delta_jog_cmds"));
+
+    joy_sub_ = n_.subscribe("joy", 1, &SpaceMouseToTwist::joyCallback, this);
+    twist_pub_ = n_.advertise<geometry_msgs::TwistStamped>(output_topic, 1);
 
     spinner_.start();
     ros::waitForShutdown();
@@ -48,7 +51,7 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "xbox_to_twist");
 
-  to_twist::xboxToTwist to_twist;
+  to_twist::SpaceMouseToTwist to_twist;
 
   return 0;
 }

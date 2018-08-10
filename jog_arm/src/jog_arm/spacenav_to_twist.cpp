@@ -9,8 +9,11 @@ class spaceNavToTwist
 public:
   spaceNavToTwist() : spinner_(2)
   {
+    std::string output_topic;
+    ros::param::param("~output_topic", output_topic, std::string("jog_arm_server/delta_jog_cmds"));
+
     joy_sub_ = n_.subscribe("spacenav/joy", 1, &spaceNavToTwist::joyCallback, this);
-    twist_pub_ = n_.advertise<geometry_msgs::TwistStamped>("jog_arm_server/delta_jog_cmds", 1);
+    twist_pub_ = n_.advertise<geometry_msgs::TwistStamped>(output_topic, 1);
 
     spinner_.start();
     ros::waitForShutdown();
