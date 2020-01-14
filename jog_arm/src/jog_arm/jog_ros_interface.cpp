@@ -59,8 +59,6 @@ JogROSInterface::JogROSInterface() :
   // Wait for JointStates and clients to appear
   ROS_DEBUG_NAMED(NODE_NAME, "Waiting for JointState topic");
   ros::topic::waitForMessage<sensor_msgs::JointState>(ros_parameters_.joint_topic);
-  ROS_DEBUG_NAMED(NODE_NAME, "Waiting for Cartesian command topic");
-  ros::topic::waitForMessage<geometry_msgs::TwistStamped>(ros_parameters_.cartesian_command_in_topic);
 
   // Wait for low pass filters to stabilize
   ros::Duration(10 * ros_parameters_.publish_period).sleep();

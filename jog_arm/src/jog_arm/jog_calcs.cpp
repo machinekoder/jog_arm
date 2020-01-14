@@ -34,13 +34,9 @@ namespace jog_arm {
     kinematic_state_->copyJointGroupPositions(joint_model_group_, dummy_joint_values);
 
     // Wait for initial messages
-    ROS_INFO_NAMED(NODE_NAME, "Waiting for first joint msg.");
+    ROS_DEBUG_NAMED(NODE_NAME, "Waiting for first joint msg.");
     ros::topic::waitForMessage<sensor_msgs::JointState>(parameters_.joint_topic);
-    ROS_INFO_NAMED(NODE_NAME, "Received first joint msg.");
-
-    ROS_INFO_NAMED(NODE_NAME, "Waiting for first command msg.");
-    ros::topic::waitForMessage<geometry_msgs::TwistStamped>(parameters_.cartesian_command_in_topic);
-    ROS_INFO_NAMED(NODE_NAME, "Received first command msg.");
+    ROS_DEBUG_NAMED(NODE_NAME, "Received first joint msg.");
 
     resetVelocityFilters();
 
