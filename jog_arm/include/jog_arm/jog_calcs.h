@@ -25,7 +25,7 @@ namespace jog_arm {
   class JogCalcs {
   public:
     JogCalcs(const JogArmParameters &parameters, JogArmShared &shared_variables,
-             std::shared_ptr <robot_model_loader::RobotModelLoader> model_loader_ptr);
+             const std::shared_ptr <robot_model_loader::RobotModelLoader>& model_loader_ptr);
 
   protected:
     ros::NodeHandle nh_;
