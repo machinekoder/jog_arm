@@ -404,7 +404,7 @@ namespace jog_arm {
 
 // Possibly calculate a velocity scaling factor, due to proximity of singularity
 // and direction of motion
-  double JogCalcs::decelerateForSingularity(Eigen::MatrixXd jacobian, const Eigen::VectorXd commanded_velocity) {
+  double JogCalcs::decelerateForSingularity(Eigen::MatrixXd jacobian, const Eigen::VectorXd& commanded_velocity) {
     double velocity_scale = 1;
 
     // Find the direction away from nearest singularity.
