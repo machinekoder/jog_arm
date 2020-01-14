@@ -46,6 +46,15 @@ JogROSInterface::JogROSInterface() :
   ros::Subscriber joints_sub = n.subscribe(ros_parameters_.joint_topic, 1, &JogROSInterface::jointsCB, this);
   ros::Subscriber joint_jog_cmd_sub =
       n.subscribe(ros_parameters_.joint_command_in_topic, 1, &JogROSInterface::deltaJointCmdCB, this);
+  ros::Subscriber command_frame_sub;
+  if (!ros_parameters_.command_frame_topic.empty()) {
+    command_frame_sub = n.subscribe(ros_parameters_.command_frame_topic, 1,
+                                    &JogROSInterface::commandFrameCB, this);
+  }
+  ros::Subscriber planning_frame_sub;
+  if (!ros_parameters_.planning_frame_topic.empty()) {
+    planning_frame_sub = n.subscribe(ros_parameters_.planning_frame_topic, 1, &JogROSInterface::planningFrameCB, this);
+  }
 
   // Publish freshly-calculated joints to the robot
   // Put the outgoing msg in the right format (trajectory_msgs/JointTrajectory
@@ -55,6 +64,8 @@ JogROSInterface::JogROSInterface() :
     outgoing_cmd_pub = n.advertise<trajectory_msgs::JointTrajectory>(ros_parameters_.command_out_topic, 1);
   else if (ros_parameters_.command_out_type == "std_msgs/Float64MultiArray")
     outgoing_cmd_pub = n.advertise<std_msgs::Float64MultiArray>(ros_parameters_.command_out_topic, 1);
+
+  shared_variables_.command_frame = ros_parameters_.command_frame;
 
   // Wait for JointStates and clients to appear
   ROS_DEBUG_NAMED(NODE_NAME, "Waiting for JointState topic");
@@ -150,9 +161,11 @@ void JogROSInterface::deltaCartesianCmdCB(const geometry_msgs::TwistStampedConst
   shared_variables_.command_deltas.twist = msg->twist;
   shared_variables_.command_deltas.header = msg->header;
 
-  // Input frame determined by YAML file if not passed with message
+  // Input frame determined by command frame file if not passed with message
   if (shared_variables_.command_deltas.header.frame_id.empty()) {
-    shared_variables_.command_deltas.header.frame_id = ros_parameters_.command_frame;
+    pthread_mutex_lock(&shared_variables_.command_frame_mutex);
+    shared_variables_.command_deltas.header.frame_id = shared_variables_.command_frame;
+    pthread_mutex_unlock(&shared_variables_.command_frame_mutex);
   }
 
   // Check if input is all zeros. Flag it if so to skip calculations/publication
@@ -179,9 +192,11 @@ void JogROSInterface::deltaJointCmdCB(const jog_msgs::JogJointConstPtr& msg)
   pthread_mutex_lock(&shared_variables_.joint_command_deltas_mutex);
   shared_variables_.joint_command_deltas = *msg;
 
-  // Input frame determined by YAML file if not passed with message
+  // Input frame determined by command frame file if not passed with message
   if (shared_variables_.joint_command_deltas.header.frame_id.empty()) {
-    shared_variables_.joint_command_deltas.header.frame_id = ros_parameters_.command_frame;
+    pthread_mutex_lock(&shared_variables_.command_frame_mutex);
+    shared_variables_.joint_command_deltas.header.frame_id = shared_variables_.command_frame;
+    pthread_mutex_unlock(&shared_variables_.command_frame_mutex);
   }
 
   // Check if joint inputs is all zeros. Flag it if so to skip
@@ -209,6 +224,18 @@ void JogROSInterface::jointsCB(const sensor_msgs::JointStateConstPtr& msg)
   pthread_mutex_lock(&shared_variables_.joints_mutex);
   shared_variables_.joints = *msg;
   pthread_mutex_unlock(&shared_variables_.joints_mutex);
+}
+
+void JogROSInterface::commandFrameCB(const std_msgs::StringPtr &msg) {
+  pthread_mutex_lock(&shared_variables_.command_frame_mutex);
+  shared_variables_.command_frame = msg->data;
+  pthread_mutex_unlock(&shared_variables_.command_frame_mutex);
+}
+
+void JogROSInterface::planningFrameCB(const std_msgs::StringPtr &msg) {
+  pthread_mutex_lock(&shared_variables_.planning_frame_mutex);
+  shared_variables_.planning_frame = msg->data;
+  pthread_mutex_unlock(&shared_variables_.planning_frame_mutex);
 }
 
 // Read ROS parameters, typically from YAML file
@@ -245,6 +272,7 @@ bool JogROSInterface::readParameters(ros::NodeHandle& n)
   error +=
       !rosparam_shortcuts::get("", n, parameter_ns + "/joint_command_in_topic", ros_parameters_.joint_command_in_topic);
   error += !rosparam_shortcuts::get("", n, parameter_ns + "/command_frame", ros_parameters_.command_frame);
+  ros::param::get(parameter_ns + "/command_frame_topic", ros_parameters_.command_frame_topic);
   error += !rosparam_shortcuts::get("", n, parameter_ns + "/incoming_command_timeout",
                                     ros_parameters_.incoming_command_timeout);
   error += !rosparam_shortcuts::get("", n, parameter_ns + "/lower_singularity_threshold",
@@ -257,6 +285,7 @@ bool JogROSInterface::readParameters(ros::NodeHandle& n)
                                     ros_parameters_.hard_stop_collision_proximity_threshold);
   error += !rosparam_shortcuts::get("", n, parameter_ns + "/move_group_name", ros_parameters_.move_group_name);
   error += !rosparam_shortcuts::get("", n, parameter_ns + "/planning_frame", ros_parameters_.planning_frame);
+  ros::param::get(parameter_ns + "/planning_frame_topic", ros_parameters_.planning_frame_topic);
   error += !rosparam_shortcuts::get("", n, parameter_ns + "/gazebo", ros_parameters_.gazebo);
   error += !rosparam_shortcuts::get("", n, parameter_ns + "/collision_check", ros_parameters_.collision_check);
   error += !rosparam_shortcuts::get("", n, parameter_ns + "/warning_topic", ros_parameters_.warning_topic);
@@ -273,9 +302,12 @@ bool JogROSInterface::readParameters(ros::NodeHandle& n)
   rosparam_shortcuts::shutdownIfError(parameter_ns, error);
 
   // Set the input frame, as determined by YAML file:
-  pthread_mutex_lock(&shared_variables_.command_deltas_mutex);
-  shared_variables_.command_deltas.header.frame_id = ros_parameters_.command_frame;
-  pthread_mutex_unlock(&shared_variables_.command_deltas_mutex);
+  pthread_mutex_lock(&shared_variables_.command_frame_mutex);
+  shared_variables_.command_frame = ros_parameters_.command_frame;
+  pthread_mutex_unlock(&shared_variables_.command_frame_mutex);
+  pthread_mutex_lock(&shared_variables_.planning_frame_mutex);
+  shared_variables_.planning_frame = ros_parameters_.planning_frame;
+  pthread_mutex_unlock(&shared_variables_.planning_frame_mutex);
 
   // Input checking
   if (ros_parameters_.hard_stop_singularity_threshold < ros_parameters_.lower_singularity_threshold)

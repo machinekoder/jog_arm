@@ -9,6 +9,7 @@
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <sensor_msgs/JointState.h>
 #include <jog_msgs/JogJoint.h>
+#include <std_msgs/String.h>
 #include <geometry_msgs/TwistStamped.h>
 #include "jog_arm_server.h"
 
@@ -41,6 +42,10 @@ namespace jog_arm {
     void deltaJointCmdCB(const jog_msgs::JogJointConstPtr &msg);
 
     void jointsCB(const sensor_msgs::JointStateConstPtr &msg);
+
+    void commandFrameCB(const std_msgs::StringPtr &msg);
+
+    void planningFrameCB(const std_msgs::StringPtr &msg);
 
     bool readParameters(ros::NodeHandle &n);
 

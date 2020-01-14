@@ -62,6 +62,12 @@ struct JogArmShared
   geometry_msgs::TwistStamped command_deltas;
   pthread_mutex_t command_deltas_mutex{};
 
+  std::string command_frame;
+  pthread_mutex_t command_frame_mutex{};
+
+  std::string planning_frame;
+  pthread_mutex_t planning_frame_mutex{};
+
   jog_msgs::JogJoint joint_command_deltas;
   pthread_mutex_t joint_command_deltas_mutex{};
 
@@ -98,8 +104,8 @@ struct JogArmShared
 // ROS params to be read
 struct JogArmParameters
 {
-  std::string move_group_name, joint_topic, cartesian_command_in_topic, command_frame, command_out_topic,
-      planning_frame, warning_topic, joint_command_in_topic, command_in_type, command_out_type;
+  std::string move_group_name, joint_topic, cartesian_command_in_topic, command_frame, command_frame_topic, command_out_topic,
+      planning_frame, planning_frame_topic, warning_topic, joint_command_in_topic, command_in_type, command_out_type;
   double linear_scale, rotational_scale, joint_scale, lower_singularity_threshold, hard_stop_singularity_threshold,
       lower_collision_proximity_threshold, hard_stop_collision_proximity_threshold, low_pass_filter_coeff,
       publish_period, publish_delay, incoming_command_timeout, joint_limit_margin, collision_check_rate;

@@ -70,7 +70,7 @@ namespace jog_arm {
                               const Eigen::VectorXd &delta_theta, double singularity_scale);
 
     trajectory_msgs::JointTrajectory composeOutgoingMessage(sensor_msgs::JointState &joint_state,
-                                                            const ros::Time &stamp) const;
+                                                            const ros::Time &stamp, const std::string &frame_id) const;
 
     void lowPassFilterVelocities(const Eigen::VectorXd &joint_vel);
 

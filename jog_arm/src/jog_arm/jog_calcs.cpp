@@ -187,7 +187,7 @@ namespace jog_arm {
 
     // Convert the cmd to the MoveGroup planning frame.
     try {
-      listener_.waitForTransform(cmd.header.frame_id, parameters_.planning_frame, ros::Time::now(), ros::Duration(0.2));
+      listener_.waitForTransform(cmd.header.frame_id, shared_variables.planning_frame, ros::Time::now(), ros::Duration(0));
     }
     catch (const tf::TransformException &ex) {
       ROS_ERROR_STREAM_NAMED(NODE_NAME, ros::this_node::getName() << ": " << ex.what());
@@ -200,7 +200,7 @@ namespace jog_arm {
     lin_vector.vector = cmd.twist.linear;
     lin_vector.header.frame_id = cmd.header.frame_id;
     try {
-      listener_.transformVector(parameters_.planning_frame, lin_vector, lin_vector);
+      listener_.transformVector(shared_variables.planning_frame, lin_vector, lin_vector);
     }
     catch (const tf::TransformException &ex) {
       ROS_ERROR_STREAM_NAMED(NODE_NAME, ros::this_node::getName() << ": " << ex.what());
@@ -211,7 +211,7 @@ namespace jog_arm {
     rot_vector.vector = cmd.twist.angular;
     rot_vector.header.frame_id = cmd.header.frame_id;
     try {
-      listener_.transformVector(parameters_.planning_frame, rot_vector, rot_vector);
+      listener_.transformVector(shared_variables.planning_frame, rot_vector, rot_vector);
     }
     catch (const tf::TransformException &ex) {
       ROS_ERROR_STREAM_NAMED(NODE_NAME, ros::this_node::getName() << ": " << ex.what());
@@ -221,7 +221,7 @@ namespace jog_arm {
     // Put these components back into a TwistStamped
     geometry_msgs::TwistStamped twist_cmd;
     twist_cmd.header.stamp = cmd.header.stamp;
-    twist_cmd.header.frame_id = parameters_.planning_frame;
+    twist_cmd.header.frame_id = shared_variables.planning_frame;
     twist_cmd.twist.linear = lin_vector.vector;
     twist_cmd.twist.angular = rot_vector.vector;
 
@@ -244,7 +244,7 @@ namespace jog_arm {
     lowPassFilterPositions();
 
     const ros::Time next_time = ros::Time::now() + ros::Duration(parameters_.publish_period);
-    new_traj_ = composeOutgoingMessage(jt_state_, next_time);
+    new_traj_ = composeOutgoingMessage(jt_state_, next_time, shared_variables.planning_frame);
 
     // If close to a collision or a singularity, decelerate
     applyVelocityScaling(shared_variables, new_traj_, delta_theta, decelerateForSingularity(jacobian, delta_x));
@@ -291,7 +291,7 @@ namespace jog_arm {
     kinematic_state_->setVariableValues(jt_state_);
 
     const ros::Time next_time = ros::Time::now() + ros::Duration(parameters_.publish_delay);
-    new_traj_ = composeOutgoingMessage(jt_state_, next_time);
+    new_traj_ = composeOutgoingMessage(jt_state_, next_time, shared_variables.planning_frame);
 
     // check if new joint state is valid
     if (!checkIfJointsWithinBounds(new_traj_)) {
@@ -351,9 +351,9 @@ namespace jog_arm {
   }
 
   trajectory_msgs::JointTrajectory JogCalcs::composeOutgoingMessage(sensor_msgs::JointState &joint_state,
-                                                                    const ros::Time &stamp) const {
+                                                                    const ros::Time &stamp, const std::string &frame_id) const {
     trajectory_msgs::JointTrajectory new_jt_traj;
-    new_jt_traj.header.frame_id = parameters_.planning_frame;
+    new_jt_traj.header.frame_id = frame_id;
     new_jt_traj.header.stamp = stamp;
     new_jt_traj.joint_names = joint_state.name;
 
